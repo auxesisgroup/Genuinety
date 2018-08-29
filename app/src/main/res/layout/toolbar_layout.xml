@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.v7.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/toolbarCardView"
+    android:layout_width="match_parent"
+    android:layout_height="?attr/actionBarSize"
+    app:cardBackgroundColor="@android:color/white"
+    app:cardCornerRadius="0dp"
+    app:cardElevation="4dp"
+    app:cardPreventCornerOverlap="false"
+    app:cardUseCompatPadding="false">
+
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        app:title="AuxSecure"
+        android:layout_height="wrap_content">
+
+        <android.support.v7.widget.AppCompatImageView
+            android:id="@+id/toolbarLogo"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            app:srcCompat="@drawable/logo_auxesis" />
+
+        <TextView
+            android:id="@+id/toolbarTitle"
+            style="@style/TextAppearance.AppCompat.Widget.ActionBar.Title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="48dp"
+            android:layout_marginRight="48dp"
+            android:gravity="center"
+            android:textSize="36sp"
+            android:text="@string/app_name"
+            android:textColor="@android:color/black" />
+
+    </android.support.v7.widget.Toolbar>
+
+</android.support.v7.widget.CardView>
