@@ -68,7 +68,7 @@ class LoginActivity: AppCompatActivity(), BitteBitte {
                         setContentView(R.layout.activity_login)
 
                         btnScan.onClick {
-                            // startActivity<ScanActivity>()
+                            startActivity<ScanActivity>()
                         }
 
                     } else {
