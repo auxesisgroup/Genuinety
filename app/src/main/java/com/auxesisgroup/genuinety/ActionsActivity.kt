@@ -1,6 +1,7 @@
 package com.auxesisgroup.genuinety
 
 import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
 import android.support.annotation.NonNull
 import android.support.v4.content.ContextCompat
@@ -18,6 +19,7 @@ import org.jetbrains.anko.*
 import org.jetbrains.anko.design.textInputEditText
 import org.jetbrains.anko.design.textInputLayout
 import org.jetbrains.anko.sdk25.coroutines.onClick
+import org.jetbrains.anko.support.v4.space
 import kotlin.properties.Delegates
 
 
@@ -162,7 +164,39 @@ class ActionsActivity: AppCompatActivity() {
                         }
 
                         positiveButton("Update Details") {
-                            showProgressBar()
+                            setItemDetails(contractAddress, name.getInput(), merchant.getInput(), linkUrl.getInput(), content.getInput())
+                                    .subscribeOn(Schedulers.io())
+                                    .observeOn(AndroidSchedulers.mainThread())
+                                    .subscribe(
+                                            { res ->
+                                                dismissProgressBar()
+                                                alert {
+                                                    customView {
+                                                        title = "Item Details Updated Successfully"
+                                                        verticalLayout {
+                                                            padding = dip(20)
+                                                            textView("Your transaction id is :\n${res.transactionHash}") {
+                                                                typeface = Typeface.DEFAULT_BOLD
+                                                                textSize = sp(6).toFloat()
+                                                            }
+                                                            space().lparams(height = dip(16))
+
+                                                            button("View on Auxledger Blockchain") {
+                                                                textSize = sp(8).toFloat()
+                                                                textColor = Color.WHITE
+                                                                background = ContextCompat.getDrawable(ctx, R.drawable.button_rounded_blue)
+                                                                onClick { browse("$explorerUrl${res.transactionHash}") }
+                                                            }
+                                                        }
+                                                    }
+                                                    positiveButton("GO BACK") {}
+                                                }.show()
+                                                Log.d("TxHash", res.transactionHash)
+                                            },
+                                            { err ->
+                                                Log.e("Error", err.toJSONLike())
+                                            }
+                                    )
                         }
                     }
                 }
@@ -170,7 +204,48 @@ class ActionsActivity: AppCompatActivity() {
         }
 
         btnViewDetails.onClick {
-            showProgressBar()
+            getItemDetails(contractAddress)
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(
+                            { res ->
+                                dismissProgressBar()
+                                alert {
+                                    customView {
+                                        scrollView {
+                                            verticalLayout {
+                                                padding = dip(20)
+                                                textView("Data from Blockchain") {
+                                                    typeface = Typeface.DEFAULT_BOLD
+                                                    textColor = Color.BLUE
+                                                    textSize = sp(8).toFloat()
+                                                }
+                                                space().lparams(height = dip(6))
+                                                textView("Item Code: ${res?.value2}") {textSize = sp(6).toFloat()}
+                                                textView("Item Name: ${res?.value3}") {textSize = sp(6).toFloat()}
+                                                textView("Merchant Name: ${res?.value4}") {textSize = sp(6).toFloat()}
+                                                textView("URL: ${res?.value5}") {textSize = sp(6).toFloat()}
+                                                textView("Details: ${res?.value6}") {textSize = sp(6).toFloat()}
+
+                                                space().lparams(height = dip(30))
+                                                button("View on Auxledger Blockchain") {
+                                                    padding = dip(2)
+                                                    textSize = sp(8).toFloat()
+                                                    textColor = Color.WHITE
+                                                    background = ContextCompat.getDrawable(ctx, R.drawable.button_rounded_blue)
+                                                    onClick { browse("$explorerUrl$contractTxHash") }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }.show()
+                                Log.d("Item Details", res.toString())
+                            },
+                            { err ->
+                                toast("Error: Missing details. Try adding details first.")
+                                Log.e("Error", err.toJSONLike())
+                            }
+                    )
         }
     }
 
