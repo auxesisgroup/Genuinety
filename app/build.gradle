@@ -9,6 +9,7 @@ properties.load(project.rootProject.file('local.properties').newDataInputStream(
 
 final auxledgerNodeUrl = properties.getProperty("auxledgerNodeUrl")
 final privateKey = properties.getProperty("privateKey")
+final genuinentyApi = properties.getProperty("genuinentyApi")
 
 
 android {
@@ -31,6 +32,7 @@ android {
     buildTypes.each {
         it.buildConfigField 'String', 'AUXLEDGERNODEURL', auxledgerNodeUrl
         it.buildConfigField 'String', 'PRIVATEKEY', privateKey
+        it.buildConfigField 'String', 'GENUINETYAPI', genuinentyApi
     }
 }
 
