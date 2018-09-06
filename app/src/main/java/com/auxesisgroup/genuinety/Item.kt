@@ -13,8 +13,7 @@ data class Item(
 )
 
 data class Detail(
-    val id: Int = 0,
-    val heading: String = "",
-    val content: String = "",
+    val heading: String = "...",
+    val content: String = "...",
     val item_id: Int = 0
 )

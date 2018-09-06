@@ -24,7 +24,7 @@
         android:background="@drawable/button_rounded_blue"
         android:gravity="center"
         android:padding="16dp"
-        android:text="Scan Barcode"
+        android:text="Scan QR Code"
         android:textAppearance="@style/TextAppearance.AppCompat.Inverse"
         android:textSize="28sp"
         app:layout_constraintBottom_toBottomOf="parent"

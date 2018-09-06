@@ -30,7 +30,7 @@ class ActionsActivity: AppCompatActivity(), ApiCallback {
     private val clientId = 100023
     private var contractAddress = ""
     private var contractTxHash = ""
-    private var item: Item = Item()
+    private var itemUpdate: Item = Item()
     private var itemCode: String by Delegates.notNull()
     private var isRemoveCall = false
     private var isAddedAlready = false
@@ -42,7 +42,9 @@ class ActionsActivity: AppCompatActivity(), ApiCallback {
 
         pd = indeterminateProgressDialog("Executing network request..Please wait...")
 
-        itemCode = intent.extras["itemCode"].toString()
+        if (intent.extras["itemCode"].toString().toInt() < 2147483648) {
+            itemCode = intent.extras["itemCode"].toString()
+        }
 
         WebService.getItem("$clientId", itemCode)
                 .subscribeOn(Schedulers.io())
@@ -51,7 +53,7 @@ class ActionsActivity: AppCompatActivity(), ApiCallback {
                         { res ->
                             when (res) {
                                 is Item -> {
-                                    item = Item(res.id, res.client_id, res.code, res.name, res.merchant, res.url, res.scAddress, res.scTxHash, res.details)
+                                    itemUpdate = Item(res.id, res.client_id, res.code, res.name, res.merchant, res.url, res.scAddress, res.scTxHash, res.details)
                                     when (itemCode) {
                                         res.code -> {
                                             Log.e("isCreated", "TAG is created")
@@ -84,13 +86,16 @@ class ActionsActivity: AppCompatActivity(), ApiCallback {
                             Log.e("isCreated","TAG is not created")
                             Log.e("isCreated","Attempting to create")
                             dismissProgressBar()
-                            val itemToCreate = Item(itemCode.toInt(), clientId, itemCode, item.name, item.merchant, item.url, item.scAddress, item.scTxHash, listOf(Detail(0,"...", "...", itemCode.toInt())))
-                            WebService.addItem(itemToCreate)
+                            WebService.addItem(Item(id = itemCode.toInt(), client_id = clientId, code = itemCode, details = listOf(Detail(item_id = itemCode.toInt()))))
                                     .subscribeOn(Schedulers.io())
                                     .observeOn(AndroidSchedulers.mainThread())
                                     .subscribe(
                                             { resFirst ->
                                                 initView()
+                                                alert {
+                                                    title = "Successfully created the TAG for the first time!"
+                                                    okButton {  }
+                                                }.show()
                                                 Log.d(" Add First Response", resFirst.toJSONLike())
                                             },
                                             { errFirst ->
@@ -183,16 +188,17 @@ class ActionsActivity: AppCompatActivity(), ApiCallback {
                         }
 
                         positiveButton("Update Details") {
-                            val itemUpdate = Item(item.id, clientId, item.code, name.getInput(), merchant.getInput(), linkUrl.getInput(), contractAddress, contractTxHash,
-                                    listOf(Detail(item.details[0].id, "Details", content.getInput(), item.id)))
+                            val itemToUpdate = Item(itemCode.toInt(), clientId, itemCode, name.getInput(), merchant.getInput(), linkUrl.getInput(), contractAddress, contractTxHash,
+                                    listOf(Detail("Details", content.getInput(), itemCode.toInt())))
 
                             Log.e("ITEM UPDATE", itemUpdate.toJSONLike())
                             showProgressBar()
-                            WebService.updateItemObservable(itemUpdate)
+                            WebService.updateItemObservable(itemToUpdate)
                                     .subscribeOn(Schedulers.io())
                                     .observeOn(AndroidSchedulers.mainThread())
                                     .subscribe(
                                             { res ->
+                                                itemUpdate = Item(res.id, res.client_id, res.code, res.name, res.merchant, res.url, res.scAddress, res.scTxHash, res.details)
                                                 Log.e("Details Updated", res.toJSONLike())
                                             },
                                             { err ->
@@ -247,78 +253,9 @@ class ActionsActivity: AppCompatActivity(), ApiCallback {
                     .subscribe(
                             { res ->
                                 dismissProgressBar()
-                                alert {
-                                    customView {
-                                        scrollView {
-                                            verticalLayout {
-                                                padding = dip(20)
-                                                textView("Data from Blockchain") {
-                                                    typeface = DEFAULT_BOLD
-                                                    textColor = Color.BLUE
-                                                    textSize = sp(8).toFloat()
-                                                }
-                                                space().lparams(height = dip(6))
-                                                textView("Item Code: ${res?.value2}") {textSize = sp(6).toFloat()}
-                                                textView("Item Name: ${res?.value3}") {textSize = sp(6).toFloat()}
-                                                textView("Merchant Name: ${res?.value4}") {textSize = sp(6).toFloat()}
-                                                textView("URL: ${res?.value5}") {textSize = sp(6).toFloat()}
-                                                textView("Details: ${res?.value6}") {textSize = sp(6).toFloat()}
-
-                                                space().lparams(height = dip(30))
-
-                                                textView("Data from Genuinety") {
-                                                    typeface = DEFAULT_BOLD
-                                                    textColor = Color.parseColor("#008000")
-                                                    textSize = sp(8).toFloat()
-                                                }
-                                                space().lparams(height = dip(6))
-                                                textView("Item Code: ${res?.value2}") {textSize = sp(6).toFloat()}
-                                                textView("Item Name: ${item.name}") {textSize = sp(6).toFloat()}
-                                                textView("Merchant Name: ${item.merchant}") {textSize = sp(6).toFloat()}
-                                                textView("URL: ${item.url}") {textSize = sp(6).toFloat()}
-                                                textView("Details: ${item.details[0].content}") {textSize = sp(6).toFloat()}
-
-                                                space().lparams(height = dip(30))
-
-                                                textView("Contract Address : $contractAddress") {
-                                                    textSize = sp(6).toFloat()
-                                                }
-                                                space().lparams(height = dip(8))
-                                                textView("Contract TxHash : $contractTxHash") {
-                                                    textSize = sp(6).toFloat()
-                                                }
-
-                                                space().lparams(height = dip(16))
-                                                button("View on Auxledger Blockchain") {
-                                                    padding = dip(2)
-                                                    textSize = sp(8).toFloat()
-                                                    textColor = Color.WHITE
-                                                    background = ContextCompat.getDrawable(ctx, R.drawable.button_rounded_blue)
-                                                    onClick { browse("$explorerUrl$contractTxHash") }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }.show()
-                                Log.d("Item Details", res.toString())
-                            },
-                            { err ->
-                                toast("Error: Missing details. Try adding details first.")
-                                Log.e("Error", err.toJSONLike())
-                            }
-                    )
-        }
-
-        if (contractAddress.contains("0x")) {
-            btnViewDetailsInitial.visibility = View.VISIBLE
-            btnViewDetailsInitial.onClick {
-                showProgressBar()
-                getItemDetails(contractAddress)
-                        .subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(
-                                { res ->
-                                    dismissProgressBar()
+                                if(res.value6.isNullOrEmpty()) {
+                                    toast("Error: Missing details. Try adding details first.")
+                                } else {
                                     alert {
                                         customView {
                                             scrollView {
@@ -345,10 +282,10 @@ class ActionsActivity: AppCompatActivity(), ApiCallback {
                                                     }
                                                     space().lparams(height = dip(6))
                                                     textView("Item Code: ${res?.value2}") {textSize = sp(6).toFloat()}
-                                                    textView("Item Name: ${item.name}") {textSize = sp(6).toFloat()}
-                                                    textView("Merchant Name: ${item.merchant}") {textSize = sp(6).toFloat()}
-                                                    textView("URL: ${item.url}") {textSize = sp(6).toFloat()}
-                                                    textView("Details: ${item.details[0].content}") {textSize = sp(6).toFloat()}
+                                                    textView("Item Name: ${itemUpdate.name}") {textSize = sp(6).toFloat()}
+                                                    textView("Merchant Name: ${itemUpdate.merchant}") {textSize = sp(6).toFloat()}
+                                                    textView("URL: ${itemUpdate.url}") {textSize = sp(6).toFloat()}
+                                                    textView("Details: ${itemUpdate.details[0].content}") {textSize = sp(6).toFloat()}
 
                                                     space().lparams(height = dip(30))
 
@@ -373,6 +310,83 @@ class ActionsActivity: AppCompatActivity(), ApiCallback {
                                         }
                                     }.show()
                                     Log.d("Item Details", res.toString())
+                                }
+                            },
+                            { err ->
+                                toast("Error: Missing details. Try adding details first.")
+                                Log.e("Error", err.toJSONLike())
+                            }
+                    )
+        }
+
+        if (contractAddress.contains("0x")) {
+            btnViewDetailsInitial.visibility = View.VISIBLE
+            btnViewDetailsInitial.onClick {
+                showProgressBar()
+                getItemDetails(contractAddress)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                { res ->
+                                    dismissProgressBar()
+                                    if(res.value6.isNullOrEmpty()) {
+                                        toast("Error: Missing details. Try adding details first.")
+                                    } else {
+                                        alert {
+                                            customView {
+                                                scrollView {
+                                                    verticalLayout {
+                                                        padding = dip(20)
+                                                        textView("Data from Blockchain") {
+                                                            typeface = DEFAULT_BOLD
+                                                            textColor = Color.BLUE
+                                                            textSize = sp(8).toFloat()
+                                                        }
+                                                        space().lparams(height = dip(6))
+                                                        textView("Item Code: ${res?.value2}") {textSize = sp(6).toFloat()}
+                                                        textView("Item Name: ${res?.value3}") {textSize = sp(6).toFloat()}
+                                                        textView("Merchant Name: ${res?.value4}") {textSize = sp(6).toFloat()}
+                                                        textView("URL: ${res?.value5}") {textSize = sp(6).toFloat()}
+                                                        textView("Details: ${res?.value6}") {textSize = sp(6).toFloat()}
+
+                                                        space().lparams(height = dip(30))
+
+                                                        textView("Data from Genuinety") {
+                                                            typeface = DEFAULT_BOLD
+                                                            textColor = Color.parseColor("#008000")
+                                                            textSize = sp(8).toFloat()
+                                                        }
+                                                        space().lparams(height = dip(6))
+                                                        textView("Item Code: ${res?.value2}") {textSize = sp(6).toFloat()}
+                                                        textView("Item Name: ${itemUpdate.name}") {textSize = sp(6).toFloat()}
+                                                        textView("Merchant Name: ${itemUpdate.merchant}") {textSize = sp(6).toFloat()}
+                                                        textView("URL: ${itemUpdate.url}") {textSize = sp(6).toFloat()}
+                                                        textView("Details: ${itemUpdate.details[0].content}") {textSize = sp(6).toFloat()}
+
+                                                        space().lparams(height = dip(30))
+
+                                                        textView("Contract Address : $contractAddress") {
+                                                            textSize = sp(6).toFloat()
+                                                        }
+                                                        space().lparams(height = dip(8))
+                                                        textView("Contract TxHash : $contractTxHash") {
+                                                            textSize = sp(6).toFloat()
+                                                        }
+
+                                                        space().lparams(height = dip(16))
+                                                        button("View on Auxledger Blockchain") {
+                                                            padding = dip(2)
+                                                            textSize = sp(8).toFloat()
+                                                            textColor = Color.WHITE
+                                                            background = ContextCompat.getDrawable(ctx, R.drawable.button_rounded_blue)
+                                                            onClick { browse("$explorerUrl$contractTxHash") }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }.show()
+                                        Log.d("Item Details", res.toString())
+                                    }
                                 },
                                 { err ->
                                     toast("Error: Missing details. Try adding details first.")
@@ -388,14 +402,14 @@ class ActionsActivity: AppCompatActivity(), ApiCallback {
             !isRemoveCall -> when (res) {
                 is Item -> {
 
-                    item = Item(res.id, res.client_id, res.code, res.name, res.merchant, res.url, res.scAddress, res.scTxHash, res.details)
+                    itemUpdate = Item(res.id, res.client_id, res.code, res.name, res.merchant, res.url, res.scAddress, res.scTxHash, res.details)
 
                     when {
-                        item.scAddress.contains("0x") -> {
+                        itemUpdate.scAddress.contains("0x") -> {
 
                             dismissProgressBar()
-                            contractAddress = item.scAddress
-                            contractTxHash = item.scTxHash
+                            contractAddress = itemUpdate.scAddress
+                            contractTxHash = itemUpdate.scTxHash
                             btnUpdateDetailsLayout.visibility = View.VISIBLE
                             btnViewDetails.visibility = View.VISIBLE
 
@@ -409,7 +423,7 @@ class ActionsActivity: AppCompatActivity(), ApiCallback {
                                             okButton {  }
                                             negativeButton("Remove contract address") {
                                                 isRemoveCall = true
-                                                val updatedItemUpdate = item.copy(scAddress = "...", scTxHash = "...", details = listOf(Detail(0, "...", "...", item.id)))
+                                                val updatedItemUpdate = itemUpdate.copy(scAddress = "...", scTxHash = "...", details = listOf(Detail("...", "...", itemUpdate.id)))
                                                 WebService.updateItem(updatedItemUpdate, this@ActionsActivity)
                                                 showProgressBar()
                                             }
@@ -448,12 +462,26 @@ class ActionsActivity: AppCompatActivity(), ApiCallback {
                                             Log.d("Contract Address", contractAddress)
                                             Log.d("TxHash", scRes.transactionReceipt.transactionHash)
 
-                                            val updatedItemUpdateAfterDeploy = item.copy(scAddress = contractAddress, scTxHash = contractTxHash, details = listOf(Detail(0, "...", "...", item.id)))
+                                            val updatedItemUpdateAfterDeploy = itemUpdate.copy(scAddress = contractAddress, scTxHash = contractTxHash, details = listOf(Detail("...", "...", itemUpdate.id)))
                                             WebService.updateItemObservable(updatedItemUpdateAfterDeploy)
                                                     .subscribeOn(Schedulers.io())
                                                     .observeOn(AndroidSchedulers.mainThread())
                                                     .subscribe(
                                                             { res ->
+                                                                // To reload the view
+                                                                btnDeploy.visibility = View.VISIBLE
+                                                                btnUpdateDetails.visibility = View.VISIBLE
+                                                                btnUpdateDetailsLayout.visibility = View.VISIBLE
+                                                                btnViewDetails.visibility = View.VISIBLE
+                                                                tagView.visibility = View.VISIBLE
+                                                                tagDetails.text = """
+                                                                    Item Code: ${res.code}
+                                                                    Item Name: ${res.name}
+                                                                    Merchant Name: ${res.merchant}
+                                                                    URL: ${res.url}
+                                                                    SCAddress: ${res.scAddress}
+                                                                    SCTxHash: ${res.scTxHash}
+                                                                    Details: ${res.details[0].content}""".trimIndent()
                                                                 Log.e("Updated after deploy", res.toJSONLike())
                                                             },
                                                             { err ->
